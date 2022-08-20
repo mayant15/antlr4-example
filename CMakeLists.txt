@@ -11,13 +11,13 @@ add_definitions(-DANTLR4CPP_STATIC)
 
 include(ExternalAntlr4Cpp)
 
-message(STATUS "Found antlr4cpp libs: ${ANTLR4_LIBS} and includes: ${ANTLR4_INCLUDE_DIRS} ")
-
 set(ANTLR_EXECUTABLE ${PROJECT_SOURCE_DIR}/thirdparty/antlr4/antlr-4.10.1-complete.jar)
 find_package(ANTLR REQUIRED)
 
 antlr_target(SampleGrammarLexer TLexer.g4 LEXER PACKAGE parser)
-antlr_target(SampleGrammarParser TParser.g4 PARSER
+antlr_target(SampleGrammarParser TParser.g4
+    PARSER
+    VISITOR
     PACKAGE parser
     DEPENDS_ANTLR SampleGrammarLexer
     COMPILE_FLAGS -lib ${ANTLR_SampleGrammarLexer_OUTPUT_DIR}
@@ -29,7 +29,6 @@ add_executable(sample
     ${ANTLR_SampleGrammarParser_CXX_OUTPUTS}
 )
 target_include_directories(sample PRIVATE
-    ${ANTLR4_INCLUDE_DIRS}
     ${ANTLR_SampleGrammarLexer_OUTPUT_DIR}
     ${ANTLR_SampleGrammarParser_OUTPUT_DIR}
 )
