@@ -1,30 +1,33 @@
-#include <iostream>
-#include <numeric>
 #include <any>
 #include <cmath>
-#include <utility>
 #include <functional>
+#include <iostream>
+#include <numeric>
 #include <string>
+#include <utility>
 
-#include <antlr4-runtime.h>
 #include <TLexer.h>
 #include <TParser.h>
 #include <TParserBaseVisitor.h>
-#include <ostream>
+#include <antlr4-runtime.h>
 
 #define EMIT_LOGS 0
 
 #if EMIT_LOGS
+#define LOG(FMT, ...) std::printf(FMT "\n", ##__VA_ARGS__)
 #define LOG_VISIT(FMT, ...) std::printf("Visiting " FMT "\n", ##__VA_ARGS__)
 #define LOG_RETURN(FMT, ...) std::printf("Returning " FMT "\n", ##__VA_ARGS__)
 #else
+#define LOG(...)
 #define LOG_VISIT(...)
 #define LOG_RETURN(...)
 #endif
 
-class TreeVisitor : public parser::TParserBaseVisitor {
-public:
-    std::any visitAtom(parser::TParser::AtomContext *ctx) override {
+class TreeVisitor : public parser::TParserBaseVisitor
+{
+  public:
+    std::any visitAtom(parser::TParser::AtomContext *ctx) override
+    {
         LOG_VISIT("atom");
         if (ctx->expr()) {
             LOG_RETURN("expression");
@@ -38,7 +41,8 @@ public:
         }
     }
 
-    std::any visitSignedAtom(parser::TParser::SignedAtomContext *ctx) override {
+    std::any visitSignedAtom(parser::TParser::SignedAtomContext *ctx) override
+    {
         LOG_VISIT("signed atom");
         if (ctx->atom()) {
             LOG_RETURN("atom");
@@ -56,30 +60,36 @@ public:
         }
     }
 
-    std::any visitPowExpression(parser::TParser::PowExpressionContext *ctx) override {
+    std::any visitPowExpression(parser::TParser::PowExpressionContext *ctx) override
+    {
         LOG_VISIT("pow expression");
 
         const auto atoms = ctx->signedAtom();
         std::vector<int> childResults;
-        for (auto* expr : atoms) {
+        for (auto *expr : atoms) {
             int result = std::any_cast<int>(visitSignedAtom(expr));
             childResults.push_back(result);
         }
 
-        int result = std::accumulate(childResults.begin() + 1, childResults.end(), childResults.front(), [](int a, int b) {return std::pow(a, b); });
+        int result =
+            std::accumulate(childResults.begin() + 1, childResults.end(), childResults.front(), [](int a, int b) {
+                return std::pow(a, b);
+            });
 
         LOG_RETURN("%d from powExpression", result);
         return std::make_any<int>(result);
     }
 
-    std::any visitMultiplyingExpression(parser::TParser::MultiplyingExpressionContext *ctx) override {
+    std::any visitMultiplyingExpression(parser::TParser::MultiplyingExpressionContext *ctx) override
+    {
         LOG_VISIT("multiplying expression");
 
-        const std::function<int(int, int)> op = (ctx->STAR().size() != 0) ? [](int a, int b) {return a * b; } : [](int a, int b) {return a / b; };
+        const std::function<int(int, int)> op =
+            (ctx->STAR().size() != 0) ? [](int a, int b) { return a * b; } : [](int a, int b) { return a / b; };
 
         const auto atoms = ctx->powExpression();
         std::vector<int> childResults;
-        for (auto* expr : atoms) {
+        for (auto *expr : atoms) {
             int result = std::any_cast<int>(visitPowExpression(expr));
             childResults.push_back(result);
         }
@@ -90,14 +100,16 @@ public:
         return std::make_any<int>(result);
     }
 
-    std::any visitExpr(parser::TParser::ExprContext *ctx) override {
+    std::any visitExpr(parser::TParser::ExprContext *ctx) override
+    {
         LOG_VISIT("expression");
 
-                const std::function<int(int, int)> op = (ctx->PLUS().size() != 0) ? [](int a, int b) {return a + b; } : [](int a, int b) {return a - b; };
+        const std::function<int(int, int)> op =
+            (ctx->PLUS().size() != 0) ? [](int a, int b) { return a + b; } : [](int a, int b) { return a - b; };
 
         const auto atoms = ctx->multiplyingExpression();
         std::vector<int> childResults;
-        for (auto* expr : atoms) {
+        for (auto *expr : atoms) {
             int result = std::any_cast<int>(visitMultiplyingExpression(expr));
             childResults.push_back(result);
         }
@@ -108,7 +120,8 @@ public:
         return std::make_any<int>(result);
     }
 
-    std::any visitStat(parser::TParser::StatContext *ctx) override {
+    std::any visitStat(parser::TParser::StatContext *ctx) override
+    {
         LOG_VISIT("statement");
 
         if (ctx->VAL()) {
@@ -120,39 +133,46 @@ public:
         }
     }
 
-    std::any visitMain(parser::TParser::MainContext *ctx) override {
+    std::any visitMain(parser::TParser::MainContext *ctx) override
+    {
         LOG_VISIT("main");
         LOG_RETURN("children");
         return visitChildren(ctx);
     }
 
-private:
-    virtual std::any defaultResult() override {
+  private:
+    virtual std::any defaultResult() override
+    {
         LOG_VISIT("default");
         LOG_RETURN("1009 from default");
         return std::make_any<int>(1009);
     }
 };
 
-auto main() -> int {
-    antlr4::ANTLRInputStream input(
-        "2 * 10;"
-    );
+auto main() -> int
+{
+    std::vector<std::string> testInputs = {"2 * 10;", "8 - 10;", "24 / 3;", "2 ^ 3;"};
 
-    parser::TLexer lexer(&input);
-    antlr4::CommonTokenStream tokens(&lexer);
+    for (const auto &str : testInputs) {
+        std::cout << "Testing " << str << std::endl;
 
-    tokens.fill();
+        antlr4::ANTLRInputStream input(str);
 
-    parser::TParser parser(&tokens);
-    antlr4::tree::ParseTree *tree = parser.main();
+        parser::TLexer lexer(&input);
+        antlr4::CommonTokenStream tokens(&lexer);
 
-    std::cout << tree->toStringTree(&parser) << std::endl;
+        tokens.fill();
 
-    TreeVisitor visitor;
-    const auto value = visitor.visit(tree);
-    std::cout << "Result: " << std::any_cast<int>(value) << std::endl;
+        parser::TParser parser(&tokens);
+        antlr4::tree::ParseTree *tree = parser.main();
+
+        LOG("%s", tree->toStringTree(&parser).c_str());
+
+        TreeVisitor visitor;
+        const auto value = visitor.visit(tree);
+
+        std::cout << "  Result: " << std::any_cast<int>(value) << std::endl;
+    }
 
     return 0;
 }
-
