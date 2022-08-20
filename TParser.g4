@@ -27,14 +27,7 @@ options {
 // The function bodies could also appear in the definitions section, but I want to maximize
 // Java compatibility, so we can also create a Java parser from this grammar.
 // Still, some tweaking is necessary after the Java file generation (e.g. bool -> boolean).
-@parser::members {
-/* public parser declarations/members section */
-bool myAction() { return true; }
-bool doesItBlend() { return true; }
-void cleanUp() {}
-void doInit() {}
-void doAfter() {}
-}
+@parser::members {/* public parser declarations/members section */}
 
 // Appears in the public part of the parser in the h file.
 @parser::declarations {/* private parser declarations section */}
@@ -68,52 +61,37 @@ void doAfter() {}
 @parser::basevisitordefinitions {/* base visitor definitions section */}
 
 // Actual grammar start.
-main: stat+ EOF;
-divide : ID (and_ GreaterThan)? {doesItBlend()}?;
-and_ @init{ doInit(); } @after { doAfter(); } : And ;
+main
+    : stat+ // TODO: Add an EOF here?
+    ;
 
-conquer:
-	divide+
-	| {doesItBlend()}? and_ { myAction(); }
-	| ID (LessThan* divide)?? { $ID.text; }
-;
+stat
+    : expr SEMICOLON
+    | VAL ID EQUAL expr SEMICOLON
+    ;
 
-// Unused rule to demonstrate some of the special features.
-unused[double input = 111] returns [double calculated] locals [int _a, double _b, int _c] @init{ doInit(); } @after { doAfter(); } :
-	stat
-;
-catch [...] {
-  // Replaces the standard exception handling.
-}
-finally {
-  cleanUp();
-}
+expr
+    : multiplyingExpression ((PLUS | MINUS) multiplyingExpression)*
+    ;
 
-unused2:
-	(unused[1] .)+ (Colon | Semicolon | Plus)? ~Semicolon
-;
+multiplyingExpression
+    : powExpression ((STAR | DIVIDE) powExpression)*
+    ;
 
-stat: expr Equal expr Semicolon
-    | expr Semicolon
-;
+powExpression
+    : signedAtom (POW signedAtom)*
+    ;
 
-expr: expr Star expr
-    | expr Plus expr
-    | OpenPar expr ClosePar
-    | <assoc = right> expr QuestionMark expr Colon expr
-    | <assoc = right> expr Equal expr
-    | identifier = id
-    | flowControl
+signedAtom
+    : PLUS signedAtom
+    | MINUS signedAtom
+    | atom
+    ;
+
+atom
+    : ID
     | INT
     | String
-;
+    | LPAREN expr RPAREN
+    ;
 
-flowControl:
-	Return expr # Return
-	| Continue # Continue
-;
-
-id: ID;
-array : OpenCurly el += INT (Comma el += INT)* CloseCurly;
-idarray : OpenCurly element += id (Comma element += id)* CloseCurly;
-any: t = .;

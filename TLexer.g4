@@ -20,14 +20,7 @@ lexer grammar TLexer;
 @lexer::context {/* lexer context section */}
 
 // Appears in the public part of the lexer in the h file.
-@lexer::members {/* public lexer declarations section */
-bool canTestFoo() { return true; }
-bool isItFoo() { return true; }
-bool isItBar() { return true; }
-
-void myFooLexerAction() { /* do something*/ };
-void myBarLexerAction() { /* do something*/ };
-}
+@lexer::members {/* public lexer declarations section */}
 
 // Appears in the private part of the lexer in the h file.
 @lexer::declarations {/* private lexer declarations/members section */}
@@ -35,52 +28,42 @@ void myBarLexerAction() { /* do something*/ };
 // Appears in line with the other class member definitions in the cpp file.
 @lexer::definitions {/* lexer definitions section */}
 
-channels { CommentsChannel, DirectiveChannel }
-
-tokens {
-	DUMMY
-}
+channels { COMMENTS_CHANNEL }
 
 Return: 'return';
 Continue: 'continue';
+Function: 'func';
+VAL: 'val';
 
-INT: Digit+;
-Digit: [0-9];
+INT: DIGIT+;
+fragment DIGIT: [0-9];
 
 ID: LETTER (LETTER | '0'..'9')*;
 fragment LETTER : [a-zA-Z\u0080-\u{10FFFF}];
 
+EQUAL: '=';
 LessThan: '<';
 GreaterThan:  '>';
-Equal: '=';
-And: 'and';
+LessThanEqualTo: '<=';
+GreaterThanEqualTo: '>=';
+
+PLUS: '+';
+MINUS: '-';
+STAR: '*';
+DIVIDE: '/';
+POW: '^';
+
+LPAREN: '(';
+RPAREN: ')';
+OpenCurly: '{';
+CloseCurly: '}';
+QuestionMark: '?';
 
 Colon: ':';
-Semicolon: ';';
-Plus: '+';
-Minus: '-';
-Star: '*';
-OpenPar: '(';
-ClosePar: ')';
-OpenCurly: '{' -> pushMode(Mode1);
-CloseCurly: '}' -> popMode;
-QuestionMark: '?';
-Comma: ',' -> skip;
-Dollar: '$' -> more, mode(Mode1);
-Ampersand: '&' -> type(DUMMY);
+SEMICOLON: ';';
 
 String: '"' .*? '"';
-Foo: {canTestFoo()}? 'foo' {isItFoo()}? { myFooLexerAction(); };
-Bar: 'bar' {isItBar()}? { myBarLexerAction(); };
-Any: Foo Dot Bar? DotDot Baz;
 
-Comment : '#' ~[\r\n]* '\r'? '\n' -> channel(CommentsChannel);
-WS: [ \t\r\n]+ -> channel(99);
+Comment : '#' ~[\r\n]* '\r'? '\n' -> channel(COMMENTS_CHANNEL);
+WS: [ \t\r\n]+ -> skip;
 
-fragment Baz: 'Baz';
-
-mode Mode1;
-Dot: '.';
-
-mode Mode2;
-DotDot: '..';
